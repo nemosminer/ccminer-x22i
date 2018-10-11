@@ -77,6 +77,7 @@ extern void x11_shavite512_cpu_hash_64_sp(int thr_id, uint32_t threads, uint32_t
 extern void x13_fugue512_cpu_hash_64_sp(int thr_id, uint32_t threads, uint32_t *d_hash);
 extern void x13_hamsi512_cpu_hash_64_sp(int thr_id, uint32_t threads, uint32_t *d_hash);
 extern void x14_shabal512_cpu_hash_64_sp(int thr_id, uint32_t threads, uint32_t *d_hash);
+extern void x16_simd_echo512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash);
 
 
 // X22I CPU Hash (Validation)
@@ -218,7 +219,46 @@ extern "C" int scanhash_x22i(int thr_id, struct work* work, uint32_t max_nonce, 
 	const uint32_t first_nonce = pdata[19];
 	const int dev_id = device_map[thr_id];
 
-	uint32_t throughput =  cuda_default_throughput(thr_id, 1U << 19); // 19=256*256*8;
+	uint32_t default_throughput=1<<19;
+	bool splitsimd = true;
+	bool merge = false;
+	if ((strstr(device_name[dev_id], "1060")) || (strstr(device_name[dev_id], "P106"))) {
+		default_throughput = (1 << 21);
+		splitsimd = false;
+	} else if ((strstr(device_name[dev_id], "970") || (strstr(device_name[dev_id], "980")))) {
+		default_throughput = (1 << 21);
+		splitsimd = false;
+	} else if ((strstr(device_name[dev_id], "1050"))) {
+		default_throughput = 1 << 20;
+		splitsimd = false;
+	} else if ((strstr(device_name[dev_id], "950"))) {
+		default_throughput = 1 << 20;
+		splitsimd = false;
+	} else if ((strstr(device_name[dev_id], "960"))) {
+		default_throughput = 1 << 20;
+		splitsimd = false;
+	} else if ((strstr(device_name[dev_id], "750"))) {
+		default_throughput = 1 << 20;
+		splitsimd = false;
+	} else if ((strstr(device_name[dev_id], "1070")) || (strstr(device_name[dev_id], "P104"))) {
+		default_throughput = (1 << 24); //53686272; //1 << 20
+		merge = true;
+	} else if ((strstr(device_name[dev_id], "1080 Ti")) || (strstr(device_name[dev_id], "1080")) || (strstr(device_name[dev_id], "P102"))) {
+		default_throughput = (1 << 24); //53686272; //1 << 20
+		merge = true;
+	}
+	
+	uint32_t throughput = cuda_default_throughput(thr_id, default_throughput);
+	if (throughput > (1<<22))
+	  splitsimd = true;
+
+	if (init[thr_id]) {
+		throughput = min(throughput, max_nonce - first_nonce);
+	}
+	
+	throughput &= 0xFFFFFF00; //multiples of 128 due to cubehash_shavite & simd_echo kernels
+
+	//uint32_t throughput =  cuda_default_throughput(thr_id, 1U << 19); // 19=256*256*8;
 	//if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
 
 	uint64_t gpu_ram_size = 16 * sizeof(uint32_t) * throughput;
@@ -235,6 +275,7 @@ extern "C" int scanhash_x22i(int thr_id, struct work* work, uint32_t max_nonce, 
 			cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 		}
 		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput), throughput);
+		gpulog(LOG_INFO, thr_id, "splitsimd: %s", splitsimd ? "true" : "false");
 
 		size_t matrix_sz = 16 * sizeof(uint64_t) * 4 * 3;
 		// SM 3 implentation requires a bit more memory
@@ -252,7 +293,14 @@ extern "C" int scanhash_x22i(int thr_id, struct work* work, uint32_t max_nonce, 
 		quark_jh512_cpu_init(thr_id, throughput);
 		x11_luffaCubehash512_cpu_init(thr_id, throughput);
 		x11_shavite512_cpu_init(thr_id, throughput);
-		x11_simd512_cpu_init(thr_id, throughput);
+		
+		// x11_simd512_cpu_init(thr_id, throughput);
+		if (splitsimd) {
+		  x11_simd512_cpu_init(thr_id, (throughput >> 4));
+		} else {
+		  x11_simd512_cpu_init(thr_id, (throughput));
+		}
+
 		x13_hamsi512_cpu_init(thr_id, throughput);
 		x13_fugue512_cpu_init(thr_id, throughput);
 		x14_shabal512_cpu_init(thr_id, throughput);
@@ -303,7 +351,17 @@ extern "C" int scanhash_x22i(int thr_id, struct work* work, uint32_t max_nonce, 
 		//x11_shavite512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x11_shavite512_cpu_hash_64_sp(thr_id, throughput, d_hash[thr_id]); order++;
 
-		x11_simd512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		//x11_simd512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		if (!splitsimd) {
+		  //x16_simd_echo512_cpu_hash_64(thr_id, throughput, d_hash[thr_id]); order++;
+		  x11_simd512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order);
+		} else {
+		  for (int j = 0; j < 256; j += 16) {
+		    //x16_simd_echo512_cpu_hash_64(thr_id, throughput >> 4, d_hash[thr_id] + (((throughput / 4)*j) / (sizeof(int))));
+		    x11_simd512_cpu_hash_64(thr_id, throughput >> 4, pdata[19], NULL, d_hash[thr_id] + (((throughput / 4)*j) / (sizeof(int))),order);
+		  }
+		}
+
 		//x11_echo512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x11_echo512_cpu_hash_64_sp(thr_id, throughput, d_hash[thr_id]); order++;
 
