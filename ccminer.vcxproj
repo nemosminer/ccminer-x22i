@@ -443,6 +443,11 @@
     <CudaCompile Include="sha256\sha256d.cu" />
     <CudaCompile Include="sha256\cuda_sha256t.cu" />
     <CudaCompile Include="sha256\sha256t.cu" />
+    <CudaCompile Include="x11\cuda_x11_echo_sp.cu" />
+    <CudaCompile Include="x11\cuda_x11_shavite512_sp.cu" />
+    <CudaCompile Include="x13\cuda_x13_fugue512_sp.cu" />
+    <CudaCompile Include="x13\cuda_x13_hamsi512_sp.cu" />
+    <CudaCompile Include="x15\cuda_x14_shabal512_sp.cu" />
     <CudaCompile Include="zr5.cu" />
     <CudaCompile Include="heavy\cuda_blake512.cu">
     </CudaCompile>
