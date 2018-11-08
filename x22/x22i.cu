@@ -60,7 +60,7 @@ extern void x17_sha512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startN
 extern void x17_haval256_cpu_init(int thr_id, uint32_t threads);
 extern void x17_haval256_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, const int outlen);
 
-extern void streebog_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash);
+extern void streebog_cpu_hash_64_alexis(int thr_id, uint32_t threads, uint32_t *d_hash);
 
 extern void lyra2v2_cpu_init(int thr_id, uint32_t threads, uint64_t *d_matrix);
 extern void lyra2v2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *g_hash, int order);
@@ -299,7 +299,7 @@ extern "C" int scanhash_x22i(int thr_id, struct work* work, uint32_t max_nonce, 
 		quark_jh512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		quark_keccak512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x11_luffaCubehash512_cpu_hash_64(thr_id, throughput, d_hash[thr_id], order++);
-		
+
 		//x11_shavite512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x11_shavite512_cpu_hash_64_sp(thr_id, throughput, d_hash[thr_id]); order++;
 
@@ -330,7 +330,7 @@ extern "C" int scanhash_x22i(int thr_id, struct work* work, uint32_t max_nonce, 
 
 		lyra2v2_cpu_hash_32(thr_id, throughput, pdata[19], (uint64_t*) d_hash[thr_id], order++);		// add 0 padding????
 
-		streebog_cpu_hash_64(thr_id, throughput, d_hash[thr_id]);
+		streebog_cpu_hash_64_alexis(thr_id, throughput, d_hash[thr_id]);
 		sha256_cpu_hash_64(thr_id, throughput, d_hash[thr_id]);
 
 		/*
