@@ -83,7 +83,7 @@ extern void x14_shabal512_cpu_hash_64_sp(int thr_id, uint32_t threads, uint32_t 
 extern "C" void x22ihash(void *output, const void *input)
 {
 	//unsigned char _ALIGN(64) hash[128];
-	unsigned char hash[64 * 4] = {0}, hash2[64] = {0};
+	unsigned char hash[64 * 4] = {0}, hash2[65] = {0};	// 65 because of swifftx output size
 
 	// x11 + hamsi12-fugue13-shabal14-whirlpool15-sha512-haval256
 
