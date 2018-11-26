@@ -4470,6 +4470,7 @@ int main(int argc, char *argv[])
 		printf("  Originally based on Christian Buchner and Christian H. project\n");
 		printf("  Include some algos from alexis78, djm34, sp, tsiv and klausT.\n\n");
 		printf("BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo (tpruvot)\n\n");
+		printf("compiled by nemosminer@github.com\n\n");
 	}
 
 	rpc_user = strdup("");
